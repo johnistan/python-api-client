@@ -34,6 +34,7 @@ except:
 
 GROUPS_URI = 'groups'
 EVENTS_URI = 'events'
+EVENT_URI = 'event'
 CITIES_URI = 'cities'
 TOPICS_URI = 'topics'
 PHOTOS_URI = 'photos'
@@ -236,12 +237,13 @@ class API_Response(object):
          """Creates an object to act as container for API return val. Copies metadata from JSON"""
          self.meta = json['meta']
          uriclasses = {GROUPS_URI:Group,
-                       EVENTS_URI:Event,
+                       EVENT_URI:Event,
                        TOPICS_URI:Topic,
                        CITIES_URI:City, 
                        MEMBERS_URI:Member,
                        PHOTOS_URI:Photo,
                        RSVPS_URI:Rsvp,
+                       EVENTS_URI:Events,
                        COMMENTS_URI:Comment}
          self.results = [uriclasses[uritype](item) for item in json['results']]
 
@@ -254,7 +256,7 @@ class API_Item(object):
     datafields = [] #override
     def __init__(self, properties):
          """load properties that are relevant to all items (id, etc.)"""
-         for field in self.datafields:
+         for field in properties:
              self.__setattr__(field, properties[field])
          self.json = properties
 
@@ -262,7 +264,6 @@ class API_Item(object):
          return self.__str__();
 
 class Member(API_Item):
-    datafields = ['bio', 'name', 'link','id','photo_url', 'zip','lat','lon','city','state','country','joined','visited']
     
     def get_groups(self, apiclient, **extraparams):
         extraparams.update({'member_id':self.id})
@@ -272,18 +273,21 @@ class Member(API_Item):
         return "Member %s (url: %s)" % (self.name, self.link)
 
 class Photo(API_Item):
-    datafields = ['albumtitle', 'link', 'member_url', 'descr', 'created', 'photo_url', 'photo_urls', 'thumb_urls']
 
     def __str__(self):
         return "Photo located at %s posted by member at %s: (%s)" % (self.link, self.member_url, self.descr)
 
 
 class Event(API_Item):
-    datafields = ['id', 'name', 'updated', 'time', 'photo_url', 'event_url', 'description', 'status', \
-        'rsvpcount', 'no_rsvpcount', 'maybe_rsvpcount', \
-        'venue_id', 'venue_name', 'venue_phone', 'venue_address1', 'venue_address3', 'venue_address2', 'venue_city', 'venue_state', 'venue_zip', \
-        'venue_map', 'venue_lat', 'venue_lon', 'venue_visibility']
+    def __str__(self):
+        return 'Event %s named %s at %s (url: %s)' % (self.id, self.name, self.time, self.event_url)
 
+    def get_rsvps(self, apiclient, **extraparams):
+        extraparams['event_id'] = self.id
+        return apiclient.get_rsvps(**extraparams)
+
+class Events(API_Item):
+     
     def __str__(self):
         return 'Event %s named %s at %s (url: %s)' % (self.id, self.name, self.time, self.event_url)
 
@@ -292,17 +296,11 @@ class Event(API_Item):
         return apiclient.get_rsvps(**extraparams)
 
 class Rsvp(API_Item):
-    datafields = ['name', 'link', 'comment','zip','coord','lon','city','state','country','response','guests','answers','updated','created']
 
     def __str__(self):
         return 'Rsvp by %s (%s) with comment: %s' % (self.name, self.link, self.comment)
 
 class Group(API_Item):
-    datafields = [ 'id','name','group_urlname','link','updated',\
-                   'members','created','photo_url',\
-                   'description','zip','lat','lon',\
-                   'city','state','country','organizerProfileURL', \
-                   'topics']
     
     def __str__(self):
          return "%s (%s)" % (self.name, self.link)
@@ -320,7 +318,6 @@ class Group(API_Item):
         return apiclient.get_members(**extraparams)
 
 class City(API_Item):
-    datafields = ['city','country','state','zip','members','lat','lon']
 
     def __str__(self):
          return "%s %s, %s, %s, with %s members" % (self.city, self.zip, self.country, self.state, self.members)
@@ -336,8 +333,6 @@ class City(API_Item):
         return apiclient.get_events(**extraparams) 
 
 class Topic(API_Item):
-    datafields = ['id','name','description','link','updated',\
-                  'members','urlkey']
     
     def __str__(self):
          return "%s with %s members (%s)" % (self.name, self.members,
@@ -352,8 +347,6 @@ class Topic(API_Item):
          return apiclient.get_photos(**extraparams)
 
 class Comment(API_Item):
-    datafields = ['name','link','comment','photo_url',\
-                  'created','lat','lon','country','city','state']
     
     def __str__(self):
          return "Comment from %s (%s)" % (self.name, self.link)
