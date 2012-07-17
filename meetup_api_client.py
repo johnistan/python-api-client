@@ -96,7 +96,7 @@ class Meetup(object):
 
     def _fetch(self, uri, **url_args):
         args = self.args_str(url_args)
-        url = API_BASE_URL + uri + '/' + "?" + args
+        url = API_BASE_URL + "2/"+ uri + '/' + "?" + args
         logging.debug("requesting %s" % (url))
         return parse_json(self.opener.open(url).read())
 
